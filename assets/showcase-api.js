@@ -18,7 +18,8 @@ function result(a){try{return a.months?.length===12?calculate(a):null;}catch{ret
 
 function find(d,id){const a=d.assessments.find(a=>a.id===id);if(!a)throw new Error('Assessment not found');return a;}
 
-async function commit(d,path){d.audit=[{action:path,at:new Date().toISOString(),target:path},...(d.audit||[])].slice(0,200);await storage('readwrite',store=>store.put(d,'portfolio'));snapshot=d;}
+function changedPaths(before,after,prefix=''){if(JSON.stringify(before)===JSON.stringify(after))return[];if(before&&after&&typeof before==='object'&&typeof after==='object')return[...new Set([...Object.keys(before),...Object.keys(after)])].flatMap(key=>changedPaths(before[key],after[key],prefix?`${prefix}.${key}`:key));return[prefix];}
+async function commit(d,path){const fields=[];for(const kind of ['assessments','initiatives'])for(const record of d[kind]||[]){const before=snapshot?.[kind]?.find(x=>x.id===record.id);if(before)fields.push(...changedPaths(before,record,kind+'.'+record.id).filter(p=>!p.includes('.result.')&&!p.endsWith('.version')));}d.audit=[{action:path,at:new Date().toISOString(),user_id:'workspace-user',fields, target:path},...(d.audit||[])].slice(0,200);await storage('readwrite',store=>store.put(d,'portfolio'));snapshot=d;}
 
 function fresh(value){const a={...normalizeAssessment(value),id:crypto.randomUUID(),propertyId:`PROP-${Date.now().toString().slice(-8)}`,status:'Draft',version:1,createdBy:'workspace-user',notes:[]};a.result=result(a);return a;}
 

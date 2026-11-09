@@ -14,7 +14,7 @@ test('browser workflow: persist, validate, review, evidence, imports and backup 
  const a=await api('/assessments',{method:'POST',body:source});
  assert.equal(a.status,'Draft');
  const edited=await api('/assessments/'+a.id,{method:'PUT',body:{...a,name:'Edited office'}});
- assert.equal(edited.version,2);
+ assert.equal(edited.version,2);const audit=(await api('/audit'))[0];assert.equal(audit.user_id,'workspace-user');assert.ok(audit.fields.some(field=>field.endsWith('.name')));
  await assert.rejects(api('/assessments/'+a.id,{method:'PUT',body:a}),/changed/);
  for(const kind of ['Utility bills','Building plans','Site audit']){const body=new FormData();body.set('kind',kind);body.set('file',new File(['%PDF-1.4\n%%EOF'],'evidence.pdf',{type:'application/pdf'}));await api(`/assessments/${a.id}/documents`,{method:'POST',body});}
  assert.deepEqual((await api(`/assessments/${a.id}/validation`)).errors,[]);
