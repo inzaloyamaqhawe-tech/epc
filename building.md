@@ -62,3 +62,5 @@ Validation: **40 tests passed, 0 failed** after final updates. Includes real XLS
 
 New files include components/primitives.js, workspace.js, portfolio.js; assets/workspace.css, imports.js, showcase-api.js and fonts/; services/imports.js, audit.js, advancedEngine.js; scripts/build-showcase.js, preview-showcase.js; tests/imports.test.js; .github/workflows/ci.yml, pages.yml, aws-publish.yml; pnpm-workspace.yaml and docs/WORKSPACE-STANDARD.md, FILE-IMPORT.md, ENGINE-REVIEW.md, AWS-GITHUB.md. public-demo/ is generated and ignored; only its safe build artifact is published by Pages.
 
+
+Publication verification: GitHub Pages and CI workflows for f958fae both succeeded, including the Docker image build. The deployed https://inzaloyamaqhawe-tech.github.io/epc/ loaded the synthetic-only read-only adapter with no browser warnings/errors. Mobile test at 390×844 measured document width 390, document height 844 and a contained 302px table; temporary viewport restored. Final polish adds mobile search/expanded-menu accessibility labels, explicit public-showcase identity and direct operational headings. No AWS account/resources were altered.
