@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {targetsFor,installBoardDrag} from '../assets/board.js';
+import {targetsFor,installBoardDrag} from '../components/board.js';
 test('board stage policy respects sequence, role and independent review',()=>{
  const admin={id:'owner',role:'Admin'};
  assert.deepEqual(targetsFor({status:'Draft'},admin),['Submitted']);

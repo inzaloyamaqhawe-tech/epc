@@ -1,4 +1,4 @@
-import {installBoardDrag,targetsFor} from './board.js';
+import {installBoardDrag,targetsFor} from '/components/board.js';
 import {esc,number,money,icon,badge,grade,shell,heading,dashboard,properties,assessments,certificates,initiatives,compliance,reports,propertyTable,pagination} from '/components/views.js';
 
 import {responsiveNavigation,syncNavigationState} from './responsive.js';

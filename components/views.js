@@ -1,4 +1,4 @@
-import {targetsFor} from '/assets/board.js';
+import {targetsFor} from './board.js';
 import {esc,number,money,icon,badge,grade,colors,nav} from './primitives.js';
 export {esc,number,money,icon,badge,grade,colors,nav} from './primitives.js';
 export {workspaceShell as shell} from './workspace.js';
