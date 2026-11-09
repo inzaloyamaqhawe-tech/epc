@@ -41,6 +41,10 @@ importers:
       qrcode:
         specifier: ^1.5.4
         version: 1.5.4
+    devDependencies:
+      fake-indexeddb:
+        specifier: ^6.2.7
+        version: 6.2.7
 
 packages:
 
@@ -452,6 +456,10 @@ packages:
   express@5.3.0:
     resolution: {integrity: sha512-qCqy1xSoaugxOD4IVHb1ZWdkvCF2W3aE2okKouWj8VwJ+ztskSiXoBnCSJqfKT+cVPJhuJqe9YLbY425+Zh00g==}
     engines: {node: '>= 18'}
+
+  fake-indexeddb@6.2.7:
+    resolution: {integrity: sha512-g0ghQ+BmU3CSZaHup5FigEAAtCmtNyxkrmID7OAeK2qONHghw1aQ2l2T1RxmfhP1H1tEXVRWArUTGVCk5832ww==}
+    engines: {node: '>=18'}
 
   fast-csv@4.3.6:
     resolution: {integrity: sha512-2RNSpuwwsJGP0frGsOmTb9oUF+VkFSM4SyLTDgwf2ciHWTarN0lQTC+F2f/t5J9QjW+c65VFIAAu85GsvMIusw==}
@@ -1828,6 +1836,8 @@ snapshots:
       vary: 1.1.2
     transitivePeerDependencies:
       - supports-color
+
+  fake-indexeddb@6.2.7: {}
 
   fast-csv@4.3.6:
     dependencies:

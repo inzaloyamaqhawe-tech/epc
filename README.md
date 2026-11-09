@@ -34,7 +34,7 @@ DEMO_MODE=true node server.js
 
 Use **Import CSV / Excel** from Properties to upload legacy client exports. Use the same action in an editable assessment's Energy ledger for monthly data. Download CSV templates, edit them in Excel, map source columns, review errors/duplicates and explicitly commit draft records. No client API is required. See `docs/FILE-IMPORT.md` for accepted files, stock ledgers and limits.
 
-The public GitHub Pages showcase is read-only and uses generated sample records. It never connects to the private database or accepts client uploads. `node scripts/build-showcase.js` produces `public-demo/`; `node scripts/preview-showcase.js` previews it locally at http://127.0.0.1:4311/epc/. The Pages workflow publishes that isolated directory only. Real accounts, imports and certificates run in the local/private AWS application.
+The GitHub Pages presentation workspace starts with generated sample records and supports browser-local edits, CSV/XLSX imports, evidence attachments and review workflow using IndexedDB. Changes persist on the same origin/browser/device; they never sync to a server. Use Download backup and Restore backup to preserve or transfer records and attachments. Clearing site data removes local records. This is separate from authenticated AWS storage and official certificate activation. `node scripts/build-showcase.js` produces `public-demo/`; `node scripts/preview-showcase.js` previews it locally at http://127.0.0.1:4311/epc/. The Pages workflow publishes that isolated directory only. Real accounts, imports and certificates run in the local/private AWS application.
 
 ## What is implemented
 

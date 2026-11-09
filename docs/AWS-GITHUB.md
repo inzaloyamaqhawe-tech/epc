@@ -1,6 +1,6 @@
 # GitHub and AWS handoff
 
-Source is available in [inzaloyamaqhawe-tech/epc](https://github.com/inzaloyamaqhawe-tech/epc). GitHub Actions validates the source and builds the container on pushes/PRs. Successful CI exposes a tracked-source ZIP as an Actions artifact. GitHub source access is not a running authenticated application: the server still needs an AWS runtime, HTTPS, secrets and persistent storage. GitHub Pages cannot execute this Node/SQLite backend. A separate sample-only showcase is built and published through `pages.yml`; it uses the same visual components with a read-only synthetic adapter, never the real database or account system.
+Source is available in [inzaloyamaqhawe-tech/epc](https://github.com/inzaloyamaqhawe-tech/epc). GitHub Actions validates the source and builds the container on pushes/PRs. Successful CI exposes a tracked-source ZIP as an Actions artifact. GitHub source access is not a running authenticated application: the server still needs an AWS runtime, HTTPS, secrets and persistent storage. GitHub Pages cannot execute this Node/SQLite backend. A separate sample-only showcase is built and published through `pages.yml`; it uses the same visual components with a browser-local IndexedDB adapter with editable sample records, imports and attachments, never the real database or account system.
 
 ## Sign-in versus deployment permission
 
