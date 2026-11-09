@@ -24,7 +24,7 @@ input,select,textarea,.field input,.field select,.field textarea{background:var(
 input::placeholder,textarea::placeholder{color:var(--muted);opacity:1}
 .primary{background:var(--gradient-brand);color:#fff;box-shadow:0 4px 14px #e6186c18}
 .primary:hover{background:var(--gradient-brand);filter:brightness(1.06)}
-.text-link,.eyebrow,.nav-item.active,.avatar,.notice-inline>.icon,.callout>.icon,.wizard-step.current,.wizard-help>.icon,.workspace-results>a:hover,.suite-links>a:hover{color:var(--accent-text)}
+.text-link,.eyebrow,.nav-item.active,.avatar,.notice-inline>.icon,.callout>.icon,.wizard-step.current,.wizard-help>.icon,.workspace-results>a:hover{color:var(--accent-text)}
 .kpi.accent strong,.saving-value{color:var(--accent-text)}
 .badge.green,.success-box,.valid-row{color:var(--green-text)}
 .badge.amber,.demo-strip{color:var(--amber-text)}
