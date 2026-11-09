@@ -3,7 +3,7 @@ export const SYSTEMS=['Building orientation','Building fabric','Fenestration and
 export const PROVINCES=['Eastern Cape','Free State','Gauteng','KwaZulu-Natal','Limpopo','Mpumalanga','North West','Northern Cape','Western Cape'];
 export function normalizeAssessment(input) {
   const value={};
-  const strings=['name','address','province','municipality','erf','eskomAccount','occupancy','subtype','ownership','benchmarkSource','factorSource','professional','professionalNumber','auditBody','auditReference','auditDate','exclusionNotes'];
+  const strings=['name','address','province','municipality','erf','eskomAccount','sourceReference','occupancy','subtype','ownership','benchmarkSource','factorSource','professional','professionalNumber','auditBody','auditReference','auditDate','exclusionNotes'];
   for(const k of strings){value[k]=String(input[k]??'').trim();if(value[k].length>2000)throw new Error(`${k} is too long`);}
   for(const k of ['nfa','gfa','vacancyAreaMonths','operationalYears','benchmark','dieselFactor','lpgFactor']){value[k]=Number(input[k]||0);if(!Number.isFinite(value[k]) || value[k]<0 || value[k]>1e12)throw new Error(`Invalid ${k}`);}
   value.zone=String(input.zone||'1');

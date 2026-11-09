@@ -1,7 +1,7 @@
 FROM node:24-slim
 WORKDIR /app
 RUN corepack enable && corepack prepare pnpm@11.25.0 --activate
-COPY package.json pnpm-lock.yaml ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN pnpm install --prod --frozen-lockfile --ignore-scripts
 COPY --chown=node:node assets ./assets
 COPY --chown=node:node components ./components

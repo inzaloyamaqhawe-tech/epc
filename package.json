@@ -9,10 +9,13 @@
   "scripts": {
     "start": "node --env-file-if-exists=.env server.js",
     "test": "node --test tests/*.test.js",
-    "reminders": "node --env-file-if-exists=.env scripts/reminders.js"
+    "reminders": "node --env-file-if-exists=.env scripts/reminders.js",
+    "build:showcase": "node scripts/build-showcase.js"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.922.0",
+    "csv-parse": "^7.0.3",
+    "exceljs": "^4.4.0",
     "express": "^5.1.0",
     "express-rate-limit": "^8.2.1",
     "helmet": "^8.1.0",

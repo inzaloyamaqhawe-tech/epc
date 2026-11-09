@@ -13,7 +13,7 @@ export async function runReminders(store, now=new Date(), send=null) {
     const log=store.db.prepare('SELECT * FROM reminder_log WHERE certificate=? AND days=?').get(c.id,threshold);
     if(log.sent)continue;
     const event={certificate:c.internal,days,threshold,expires:c.expires,tenant:row.tenant};events.push(event);
-    if(send){const recipients=store.db.prepare("SELECT email FROM users WHERE tenant=? AND role IN ('Admin','Energy Manager','Compliance Officer')").all(row.tenant).map(u=>u.email);if(recipients.length){await send({...event,recipients});store.db.prepare('UPDATE reminder_log SET sent=? WHERE certificate=? AND days=?').run(now.toISOString(),c.id,threshold);}}
+    if(send){const recipients=store.db.prepare("SELECT email FROM users WHERE tenant=? AND role IN ('Admin','Energy Manager','Compliance Officer','Property Owner')").all(row.tenant).map(u=>u.email);if(recipients.length){await send({...event,recipients});store.db.prepare('UPDATE reminder_log SET sent=? WHERE certificate=? AND days=?').run(now.toISOString(),c.id,threshold);}}
   }return events;
 }
 if(process.argv[1]?.endsWith('reminders.js')){

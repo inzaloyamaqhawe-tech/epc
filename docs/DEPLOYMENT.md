@@ -45,7 +45,7 @@ This is a single-hop example. Adjust deliberately for a load balancer/CDN; do no
 
 ## Renewal email job
 
-Set SMTP host, port, sender and credentials through server configuration. STARTTLS is required on non-465 SMTP; port 465 uses TLS. The script sends to the organisation's Admin, Energy Manager and Compliance Officer accounts. No real email was sent during this build.
+Set SMTP host, port, sender and credentials through server configuration. STARTTLS is required on non-465 SMTP; port 465 uses TLS. The script sends to the organisation's Admin, Energy Manager and Compliance Officer and Property Owner accounts. No real email was sent during this build.
 
 ```sh
 node --env-file=.env scripts/reminders.js
@@ -64,3 +64,5 @@ Use one scheduler and prevent overlapping job executions. Without SMTP, the job 
 Use SQLite's backup API or a consistent service-stopped backup; copying just the main SQLite file while WAL is active is insufficient. Back up encrypted uploads and key custody separately. Restore to an isolated host, check decryption, tenant login and evidence downloads, and test reference/date calculations. Log rotation and monitoring must avoid sensitive document or credential contents.
 
 Before live rollout, run tests, use a second organisation to confirm boundaries, verify TLS/cookie attributes behind the actual proxy, test S3/SMTP if enabled, exercise a recovery drill, and have the issuing professional accept the calculation and review process. Complete expected-volume/load testing and add central rate-limit/session infrastructure before scaling out. GitHub publication of source is not application deployment.
+
+GitHub Actions CI, sample-only Pages publication and manual AWS ECR publishing are documented in AWS-GITHUB.md. Pages is a showcase, not a PHP/Node database hosting workaround. Import staging expires after 30 minutes and is purged on startup/new previews and every 15 minutes while the server runs.

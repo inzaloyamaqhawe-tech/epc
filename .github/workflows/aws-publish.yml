@@ -1,0 +1,51 @@
+name: Publish container to AWS ECR
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: aws-publish-production
+  cancel-in-progress: false
+jobs:
+  publish:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      AWS_REGION: ${{ vars.AWS_REGION }}
+      ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY }}
+      AWS_ROLE_ARN: ${{ vars.AWS_ROLE_ARN }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '24'
+      - name: Check operator configuration
+        run: |
+          test -n "$AWS_REGION" || { echo 'Set production AWS_REGION'; exit 1; }
+          test -n "$ECR_REPOSITORY" || { echo 'Set production ECR_REPOSITORY'; exit 1; }
+          test -n "$AWS_ROLE_ARN" || { echo 'Set production AWS_ROLE_ARN'; exit 1; }
+      - name: Validate application
+        run: |
+          corepack enable
+          corepack prepare pnpm@11.25.0 --activate
+          pnpm install --frozen-lockfile
+          node --test tests/*.test.js
+      - uses: aws-actions/configure-aws-credentials@cabfdba3510de1431bac9dba27511d97497fc100 # v5
+        with:
+          role-to-assume: ${{ env.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+          mask-aws-account-id: true
+      - name: Build and publish immutable image tag
+        run: |
+          ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+          REGISTRY="$ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com"
+          aws ecr get-login-password --region "$AWS_REGION" | docker login --username AWS --password-stdin "$REGISTRY"
+          IMAGE="$REGISTRY/$ECR_REPOSITORY:$GITHUB_SHA"
+          docker build --tag "$IMAGE" .
+          docker push "$IMAGE"
+          printf 'Published image `%s`\n\nRuntime deployment is a separate step; no live service was changed.\n' "$IMAGE" >> "$GITHUB_STEP_SUMMARY"

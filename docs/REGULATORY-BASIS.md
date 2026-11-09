@@ -44,7 +44,7 @@ The code uses a very small machine-precision tolerance at exact boundaries, not 
 ## Rules kept separate from statutory claims
 
 - Nine XA-labelled sections are the brief's internal evidence checklist. Their labels are not asserted to be the standard's actual clause numbering. There is no weighted checklist EPC score.
-- The 10% excluded-energy warning is a project review trigger; its asserted 2025 legal basis has not been independently verified.
+- The public SANEDI 2024 guide supports graphical total-energy reporting for material excluded consumption. Review packs now show both included and total intensity whenever exclusions exist. The asserted 2025 clause/official format still requires licensed-standard review.
 - POPIA sign-off records an explicit reviewer action. It does not establish organisation-wide legal compliance. No blanket South-African-only data residency claim is made; operator transfer arrangements require review.
 - ISO 50001 is tracked as a voluntary framework, not a universal EPC prerequisite.
 - SANEDI submission is manual. The app records the external result; it does not fabricate a government API, SANAS seal, official template or digital signature.

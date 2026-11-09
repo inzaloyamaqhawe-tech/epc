@@ -1,6 +1,6 @@
 # Bolide Energy Pro
 
-A working local EPC assessment and portfolio application for South African buildings. Includes persistent organisation records, independent review, private evidence, engineering review PDFs, manual SANEDI tracking, savings estimates and compliance evidence. The original CRM and prospector are unchanged.
+A file-first EPC assessment and portfolio application for South African buildings. Includes persistent organisation records, independent review, private evidence, engineering review PDFs, manual SANEDI tracking, savings estimates and compliance evidence. The original CRM and prospector are unchanged.
 
 ## Run the isolated demonstration
 
@@ -28,8 +28,16 @@ DEMO_MODE=true node server.js
 4. Run `node --env-file=.env server.js`. Sign in; Admin can generate single-use colleague invitation links. The platform does not send invitations automatically.
 5. Complete the operational prerequisites in `docs/DEPLOYMENT.md` before handling client records.
 
+## CSV and Excel first
+
+Use **Import CSV / Excel** from Properties to upload legacy client exports. Use the same action in an editable assessment's Energy ledger for monthly data. Download CSV templates, edit them in Excel, map source columns, review errors/duplicates and explicitly commit draft records. No client API is required. See `docs/FILE-IMPORT.md` for accepted files, stock ledgers and limits.
+
+The public GitHub Pages showcase is read-only and uses generated sample records. It never connects to the private database or accepts client uploads. `node scripts/build-showcase.js` produces `public-demo/`; `node scripts/preview-showcase.js` previews it locally at http://127.0.0.1:4311/epc/. The Pages workflow publishes that isolated directory only. Real accounts, imports and certificates run in the local/private AWS application.
+
 ## What is implemented
 
+- Fixed-header Bolide workspace with locally bundled Public Sans/Archivo typography, compact navigation, workspace search, account profile/password controls, sticky table labels, pagination and online/offline notices.
+- CSV/XLSX legacy-system intake with mapping, row validation, duplicate rejection, source traceability, transaction commit, stock-balance fuel quantity inputs and ledger replacement confirmation.
 - Branded responsive dashboard, portfolio search/sorting/province/rating filters, CSV export, workflow board and property details.
 - Five-step, automatically saved assessment; nine evidence checklist sections; twelve-month energy ledger; gross/net/vacancy area distinction; subtype and zone reference assistance.
 - Server validation, version conflict protection, immutable submitted evidence, field-level revision notes, approval by a different person, renewal drafts and certificate revocation.
@@ -65,3 +73,5 @@ Licensed standards and issuer approval; final privacy/retention and responsible-
 No MySQL adapter, PHP backend, automated professional-register validation, OCR/AI extraction, live weather feed, digital signing, automatic SANEDI submission, password recovery, per-property owner delegation or full mixed-occupancy area scheduler is included. These are not represented by fake integrations. For mixed occupancy, a professional must supply and explain the verified area-weighted reference; the simple subtype helper applies to single/dominant occupancy only.
 
 Node-capable VPS/container hosting is required. Do not upload this server to a PHP-only cPanel account or deploy it as an S3-only static site. See `docs/DEPLOYMENT.md` for supported options.
+
+See `docs/WORKSPACE-STANDARD.md` for the CRM/prospector comparison, `docs/ENGINE-REVIEW.md` for the proposed advanced modules, and `docs/AWS-GITHUB.md` for GitHub sign-in versus OIDC deployment permissions. CI runs the tests, dependency check and Docker build, with a downloadable tracked-source artifact.

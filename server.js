@@ -15,12 +15,16 @@ import { calculate, validateAssessment, anniversary, certificateStatus, savings,
 import { assessmentPdf } from './services/pdf.js';
 import { seedDemo } from './services/seed.js';
 import { REFERENCES, REFERENCE_SOURCE, ZONES } from './services/benchmarkMatrix.js';
+import { readImport,buildImportPreview,IMPORT_FIELDS,importTemplate,pruneImportStaging } from './services/imports.js';
+import { projectedSavings } from './services/advancedEngine.js';
+import { changedFields } from './services/audit.js';
 const EDIT=['Super Admin','Admin','Energy Manager','Assessor'];
 const REVIEW=['Super Admin','Admin','Reviewer'];
 const ADMIN=['Super Admin','Admin'];
 function fail(message,status=400){const e=new Error(message);e.status=status;throw e;}
 export async function createApp(config = configFromEnv()) {
   const store=openDatabase(config), app=express();
+  pruneImportStaging(store);
   let dataKey=config.dataKey;
   if(!dataKey && config.demo)dataKey=readFileSync(resolve(config.dataDir,'demo.key'),'utf8').trim();
   const storage=storageAdapter(config,Buffer.from(dataKey,'hex'));
@@ -59,10 +63,39 @@ export async function createApp(config = configFromEnv()) {
   });
   app.post('/api/logout',requireUser,(req,res)=>{store.db.prepare('DELETE FROM sessions WHERE token=?').run(req.sessionToken);res.clearCookie('epc_session',{path:'/',sameSite:'strict',secure:config.production,httpOnly:true});res.json({ok:true});});
   app.get('/api/me',requireUser,(req,res)=>res.json({user:{id:req.user.id,tenant:req.user.tenant,email:req.user.email,name:req.user.name,role:req.user.role},csrf:req.user.csrf}));
+  app.put('/api/account',requireUser,submissionLimit,async(req,res)=>{
+    const name=String(req.body.name||'').trim(),next=String(req.body.newPassword||'');if(name.length<2||name.length>100)fail('Name must be 2–100 characters');
+    let encoded=null;if(next){if(next.length<12||next.length>200)fail('New password must be 12–200 characters');const old=store.db.prepare('SELECT password FROM users WHERE id=? AND tenant=?').get(req.user.id,req.user.tenant);if(!await verifyPassword(String(req.body.currentPassword||'').slice(0,201),old.password))fail('Current password is incorrect',403);encoded=await hashPassword(next);}
+    store.transaction(()=>{store.db.prepare('UPDATE users SET name=? WHERE id=? AND tenant=?').run(name,req.user.id,req.user.tenant);if(encoded){store.db.prepare('UPDATE users SET password=? WHERE id=? AND tenant=?').run(encoded,req.user.id,req.user.tenant);store.db.prepare('DELETE FROM sessions WHERE user_id=? AND token<>?').run(req.user.id,req.sessionToken);}store.log(req.user,encoded?'account.password.change':'account.profile.change',req.user.id);});
+    res.json({user:{id:req.user.id,tenant:req.user.tenant,name,email:req.user.email,role:req.user.role}});
+  });
+  const importUpload=multer({storage:multer.memoryStorage(),limits:{fileSize:5*1024*1024,files:1,fields:4}});
+  app.get('/api/imports/template/:type',requireUser,(req,res)=>res.type('text/csv').attachment(`bolide-${req.params.type}-template.csv`).send(importTemplate(req.params.type)));
+  app.post('/api/imports/preview',requireUser,allow(...EDIT),submissionLimit,importUpload.single('file'),async(req,res)=>{
+    pruneImportStaging(store);
+    const type=String(req.body.type||'properties');if(!IMPORT_FIELDS[type])fail('Unknown import type');if(!req.file)fail('Choose a CSV or Excel file');
+    let target=null;if(type==='energy'){target=store.get(req.user.tenant,'assessment',req.body.assessmentId)||fail('Choose an assessment',404);if(!['Draft','Revision Required'].includes(target.status))fail('Only editable draft ledgers may be imported',409);}
+    const raw=await readImport(req.file.buffer,req.file.originalname,req.body.sheet||'');if(Buffer.byteLength(JSON.stringify(raw))>8*1024*1024)fail('Worksheet data is too large');
+    const preview=buildImportPreview(raw,type,{},store.list(req.user.tenant,'assessment'));const record=store.put(req.user.tenant,'import',{type,raw,mapping:preview.mapping,assessmentId:target?.id,assessmentVersion:target?.version,filename:String(req.file.originalname).slice(0,150),sha256:createHash('sha256').update(req.file.buffer).digest('hex'),createdBy:req.user.id,expires:Date.now()+30*60000,used:false});
+    store.log(req.user,'import.preview',record.id,{type,rows:preview.total});res.json({...preview,id:record.id,type,fields:IMPORT_FIELDS[type],sheets:raw.sheets,selectedSheet:raw.selectedSheet});
+  });
+  function pendingImport(req){const record=store.get(req.user.tenant,'import',req.params.id)||fail('Import session not found',404);if(record.used||record.expires<Date.now())fail('Import session expired or already completed',409);if(record.createdBy!==req.user.id)fail('Continue the import using the account that uploaded it',403);return record;}
+  app.post('/api/imports/:id/map',requireUser,allow(...EDIT),submissionLimit,(req,res)=>{
+    const record=pendingImport(req),preview=buildImportPreview(record.raw,record.type,req.body.mapping,store.list(req.user.tenant,'assessment'));store.put(req.user.tenant,'import',{...record,mapping:preview.mapping},record.version);res.json({...preview,id:record.id,type:record.type,fields:IMPORT_FIELDS[record.type],sheets:record.raw.sheets,selectedSheet:record.raw.selectedSheet});
+  });
+  app.post('/api/imports/:id/commit',requireUser,allow(...EDIT),submissionLimit,(req,res)=>{
+    const record=pendingImport(req);if(req.body.confirm!==true)fail('Confirm the preview before importing');
+    const result=store.transaction(()=>{
+      const preview=buildImportPreview(record.raw,record.type,record.mapping,store.list(req.user.tenant,'assessment'));if(preview.errors)fail('Resolve every row error before importing',422);const ids=[];
+      if(record.type==='properties')for(const row of preview.rows){const a=store.put(req.user.tenant,'assessment',{...row.value,status:'Draft',propertyId:`PROP-${randomBytes(4).toString('hex').toUpperCase()}`,createdBy:req.user.id,lastEditedBy:req.user.id,updatedAt:new Date().toISOString(),notes:[],importedFrom:{id:record.id,filename:record.filename,row:row.row,sha256:record.sha256}});ids.push(a.id);store.log(req.user,'assessment.import',a.id,{importId:record.id,row:row.row});}
+      else{const a=store.get(req.user.tenant,'assessment',record.assessmentId)||fail('Assessment not found',404);if(!['Draft','Revision Required'].includes(a.status))fail('Assessment is locked',409);if(req.body.confirmReplace!==true)fail('Confirm replacement of the current monthly ledger');const months=preview.rows.map(r=>r.value).sort((a,b)=>a.month.localeCompare(b.month));store.put(req.user.tenant,'assessment',{...a,months,lastEditedBy:req.user.id,methodologyConfirmed:false,updatedAt:new Date().toISOString(),energyImportedFrom:{id:record.id,filename:record.filename,sha256:record.sha256}},record.assessmentVersion);ids.push(a.id);store.log(req.user,'energy.import',a.id,{importId:record.id,months:months.map(m=>m.month)});}
+      store.put(req.user.tenant,'import',{...record,raw:null,used:true,completedAt:new Date().toISOString()},record.version);return{count:preview.total,assessmentIds:ids,type:record.type};
+    });res.json(result);
+  });
   app.get('/api/portfolio',requireUser,(req,res)=>{
-    const assessments=store.list(req.user.tenant,'assessment').map(a=>{let result=null;try{result=calculate(a);}catch{}return{...a,result};});
+    const assessments=store.list(req.user.tenant,'assessment').map(a=>{let result=null;try{if(a.months?.length===12)result=calculate(a);}catch{}return{...a,result};});
     const certificates=store.list(req.user.tenant,'certificate').map(c=>({...c,status:certificateStatus(c)}));
-    const initiatives=store.list(req.user.tenant,'initiative').map(i=>({...i,result:savings(i)}));
+    const initiatives=store.list(req.user.tenant,'initiative').map(i=>{let projection=null;try{projection=projectedSavings(assessments.find(a=>a.id===i.assessmentId),[i]);}catch{}return{...i,result:savings(i),projection};});
     res.json({assessments,certificates,initiatives,compliance:store.list(req.user.tenant,'compliance'),documents:store.list(req.user.tenant,'document').map(({key,sha256,...d})=>d)});
   });
   const assessment=(req)=>store.get(req.user.tenant,'assessment',req.params.id)||fail('Assessment not found',404);
@@ -71,7 +104,8 @@ export async function createApp(config = configFromEnv()) {
   });
   app.put('/api/assessments/:id',requireUser,allow(...EDIT),(req,res)=>{
     const old=assessment(req);if(!['Draft','Revision Required'].includes(old.status))fail('Only drafts or requested revisions can be edited',409);
-    const a=store.transaction(()=>{const a=store.put(req.user.tenant,'assessment',{...old,...normalizeAssessment(req.body),lastEditedBy:req.user.id,updatedAt:new Date().toISOString()},req.body.version);store.log(req.user,'assessment.update',a.id);return a;});res.json(a);
+    const normalized=normalizeAssessment(req.body),fields=changedFields(Object.fromEntries(Object.keys(normalized).map(k=>[k,old[k]])),normalized);
+    const a=store.transaction(()=>{const a=store.put(req.user.tenant,'assessment',{...old,...normalized,lastEditedBy:req.user.id,updatedAt:new Date().toISOString()},req.body.version);store.log(req.user,'assessment.update',a.id,{fields});return a;});res.json(a);
   });
   app.get('/api/assessments/:id/validation',requireUser,(req,res)=>{const a=assessment(req);res.json({errors:validateAssessment(a,store.list(req.user.tenant,'document').filter(d=>d.assessmentId===a.id))});});
   app.post('/api/assessments/:id/transition',requireUser,submissionLimit,(req,res)=>{
@@ -153,7 +187,7 @@ export async function createApp(config = configFromEnv()) {
     res.json(store.transaction(()=>{const next=store.put(req.user.tenant,'certificate',{...c,status:'Revoked',reason:String(req.body.reason).slice(0,2000)},req.body.version);store.log(req.user,'certificate.revoke',c.id,{reason:next.reason});return next;}));
   });
   app.get('/api/assessments/:id/pdf',requireUser,async(req,res)=>{
-    const a=assessment(req),c=store.list(req.user.tenant,'certificate').find(c=>c.assessmentId===a.id);const pdf=await assessmentPdf(c?.snapshot||a,c,config.origin);
+    const a=assessment(req),c=store.list(req.user.tenant,'certificate').find(c=>c.assessmentId===a.id);if(validateAssessment(c?.snapshot||a).some(e=>e.field==='months'))fail('Enter twelve consecutive completed months before exporting an annual energy review pack',422);const pdf=await assessmentPdf(c?.snapshot||a,c,config.origin);
     store.log(req.user,'report.export',a.id);res.type('application/pdf').attachment(`${c?.internal||'assessment'}-review.pdf`).send(pdf);
   });
   app.get('/api/verify/:token',(req,res)=>{
@@ -178,7 +212,7 @@ export async function createApp(config = configFromEnv()) {
     const old=store.list(req.user.tenant,'compliance').find(x=>x.framework===req.params.framework);
     res.json(store.transaction(()=>{const c=store.put(req.user.tenant,'compliance',{id:old?.id,framework:req.params.framework,status:req.body.status,notes:String(req.body.notes).slice(0,2000),by:req.user.name,at:new Date().toISOString()},req.body.version);store.log(req.user,'compliance.update',c.id,{framework:c.framework});return c;}));
   });
-  app.get('/api/audit',requireUser,allow(...ADMIN,'Reviewer','Compliance Officer'),(req,res)=>res.json(store.db.prepare('SELECT id,at,action,target,user_id FROM audit WHERE tenant=? ORDER BY id DESC LIMIT 200').all(req.user.tenant)));
+  app.get('/api/audit',requireUser,allow(...ADMIN,'Reviewer','Compliance Officer'),(req,res)=>res.json(store.db.prepare('SELECT id,at,action,target,user_id,detail FROM audit WHERE tenant=? ORDER BY id DESC LIMIT 200').all(req.user.tenant).map(({detail,...event})=>({...event,fields:store.unseal(detail,req.user.tenant).fields||[]}))));
   app.get('/api/team',requireUser,allow(...ADMIN),(req,res)=>res.json(store.db.prepare('SELECT id,name,email,role FROM users WHERE tenant=?').all(req.user.tenant)));
   app.post('/api/team/invite',requireUser,allow(...ADMIN),submissionLimit,(req,res)=>{
     const role=String(req.body.role),email=String(req.body.email||'').toLowerCase().trim();if(!ROLES.includes(role)||role==='Super Admin'||!/^\S+@\S+\.\S+$/.test(email)||email.length>200)fail('Valid email and role required');
@@ -209,6 +243,7 @@ export async function createApp(config = configFromEnv()) {
 if(process.argv[1] && fileURLToPath(import.meta.url)===resolve(process.argv[1])) {
   const {app,store,config}=await createApp();
   const server=app.listen(config.port,config.host,()=>console.log(`Bolide Energy Pro: ${config.origin}${config.demo?' — isolated synthetic demo':''}`));
+  setInterval(()=>{try{pruneImportStaging(store);}catch{console.error('Import staging maintenance failed');}},15*60000).unref();
   process.on('SIGTERM',()=>server.close(()=>{store.db.close();process.exit(0);}));
 }
 
