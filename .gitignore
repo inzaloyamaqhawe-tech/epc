@@ -1,0 +1,8 @@
+node_modules/
+.env
+.env.*
+!.env.example
+data/
+work/
+*.log
+26032026_Bolide-EPC-site-requirements.docx
