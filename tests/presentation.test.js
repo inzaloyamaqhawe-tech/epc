@@ -22,7 +22,7 @@ test('browser workflow: persist, validate, review, evidence, imports and backup 
  assert.equal((await api('/portfolio')).certificates.length,1);
  await assert.rejects(api('/assessments/'+a.id,{method:'PUT',body:edited}),/revision/);
  const fd=new FormData();fd.set('type','properties');fd.set('file',new File(['name,province,occupancy,ownership,zone,nfa,gfa\nImported building,Gauteng,G1,Private,1,2800,3200'],'properties.csv'));
- const preview=await api('/imports/preview',{method:'POST',body:fd});assert.equal(preview.errors,0);
+ const preview=await api('/imports/preview',{method:'POST',body:fd});assert.equal(preview.errors,0);assert.deepEqual(preview.rows[0].errors,[]);assert.equal(preview.rows[0].label,'Imported building');
  assert.equal((await api('/portfolio')).assessments.length,1);
  await assert.rejects(api(`/imports/${preview.id}/commit`,{method:'POST',body:{}}),/confirm/);
  await api(`/imports/${preview.id}/commit`,{method:'POST',body:{confirm:true}});
