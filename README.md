@@ -2,6 +2,8 @@
 
 A file-first EPC assessment and portfolio application for South African buildings. Includes persistent organisation records, independent review, private evidence, engineering review PDFs, manual SANEDI tracking, savings estimates and compliance evidence. The original CRM and prospector are unchanged.
 
+[Open the public sample demo](https://inzaloyamaqhawe-tech.github.io/epc/) · [GitHub checks](https://github.com/inzaloyamaqhawe-tech/epc/actions)
+
 ## Run the isolated demonstration
 
 Requires Node.js 24.7 or later and pnpm 11.25.0 (or use npm to install the package manifest).
