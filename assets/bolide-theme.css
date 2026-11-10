@@ -69,3 +69,14 @@ input::placeholder,textarea::placeholder{color:var(--muted);opacity:1}
 /* Keep workspace search beside the right-hand appearance/account controls. */
 .topbar>.workspace-search{margin-left:auto;flex:0 1 340px}.topbar>.top-actions{flex:none;margin-left:0}
 @media(max-width:767px){.topbar>.workspace-search{flex:0 0 36px}}
+/* Portfolio presentation polish: grouped metrics, deliberate row interaction. */
+.portfolio-metrics{padding:14px;background:var(--soft);border:1px solid var(--line);border-radius:14px;gap:12px}
+.portfolio-metrics>.kpi{min-width:0;box-shadow:none;background:var(--surface)}
+.table-wrap tbody>.property-row{cursor:pointer;transition:background-color .16s ease}
+.table-wrap tbody>.property-row:hover,.table-wrap tbody>.property-row:focus-within{background:var(--soft)}
+:root[data-theme=dark] .table-wrap tbody>.property-row:hover,:root[data-theme=dark] .table-wrap tbody>.property-row:focus-within{background:var(--soft)}
+.grade{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;min-width:34px;line-height:1;font-weight:750;flex:none}
+.sidebar .nav-item.active{background:#fde3ee;color:#9f1049;box-shadow:inset 3px 0 0 #c8135a}
+:root[data-theme=dark] .sidebar .nav-item.active{background:#55263b;color:#ffb8d5;box-shadow:inset 3px 0 0 #ff80b2}
+@media(max-width:767px){.portfolio-metrics{padding:10px;gap:10px}}
+@media(prefers-reduced-motion:reduce){.table-wrap tbody>.property-row{transition:none}}
