@@ -84,3 +84,5 @@ Research-extension review: retained existing status dropdowns, property filters 
 Presentation identity updated to Langa Ngidi in the browser profile and team listing. Avatar initials now use name parts (LN), rather than the first two letters of a name. Existing browser portfolio data is retained.
 
 Removed the topbar saved/connection status text and aligned workspace search to the right beside the theme/account controls. Mobile search remains compact. Browser record persistence is unchanged. Syntax and showcase build checks passed.
+
+Scope and footer correction: backup/restore no longer appear in the shared footer. Existing local portfolio controls moved to Team & access, rendered only for Admin/Super Admin, with matching click and restore-submit role checks. Team view now denies non-admin rendering. Browser-local role checks are presentation affordances, not a substitute for server authorization; Pages has no real identity system or private backup endpoints. Keep future work limited to requested polish and let management feedback guide additions.

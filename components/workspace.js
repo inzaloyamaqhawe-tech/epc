@@ -44,7 +44,7 @@ export function workspaceShell(s,content) {
 
     <main id="main" class="workspace-main" data-page="${esc(s.page)}">${content}</main>
 
-    <footer><span>© ${new Date().getFullYear()} Bolide · Energy Pro</span><div>${s.config.staticDemo?'<button data-action="backup">Download backup</button><button data-action="restore">Restore backup</button>':''}<button data-action="legal" data-id="privacy">Privacy</button><button data-action="legal" data-id="terms">Terms</button><button data-action="legal" data-id="cookies">Cookie preferences</button></div></footer>
+    <footer><span>© ${new Date().getFullYear()} Bolide · Energy Pro</span><div><button data-action="legal" data-id="privacy">Privacy</button><button data-action="legal" data-id="terms">Terms</button><button data-action="legal" data-id="cookies">Cookie preferences</button></div></footer>
 
   </div>`;
 
