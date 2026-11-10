@@ -36,7 +36,7 @@ export function workspaceShell(s,content) {
 
       <button class="workspace-search" data-action="workspace-search" aria-label="Search workspace">${icon('search')}<span>Search workspace</span><kbd>Ctrl K</kbd></button>
 
-      <div class="top-actions"><span class="connection-status" id="connection-status"><span class="dot"></span>Connected</span><button class="icon-button theme-toggle" data-action="theme" title="${s.theme==='dark'?'Use light mode':'Use dark mode'}" aria-label="${s.theme==='dark'?'Use light mode':'Use dark mode'}" aria-pressed="${s.theme==='dark'}">${icon(s.theme==='dark'?'sun':'moon')}</button><details class="account-menu"><summary class="avatar small" aria-label="Account menu" title="Account menu">${esc(initials)}</summary><div class="account-popover"><b>${esc(s.user.name)}</b><small>${esc(s.user.email)}</small><span>${esc(s.user.role)}</span><button data-action="account">Account details</button><button data-action="logout">Sign out</button></div></details></div>
+      <div class="top-actions"><button class="icon-button theme-toggle" data-action="theme" title="${s.theme==='dark'?'Use light mode':'Use dark mode'}" aria-label="${s.theme==='dark'?'Use light mode':'Use dark mode'}" aria-pressed="${s.theme==='dark'}">${icon(s.theme==='dark'?'sun':'moon')}</button><details class="account-menu"><summary class="avatar small" aria-label="Account menu" title="Account menu">${esc(initials)}</summary><div class="account-popover"><b>${esc(s.user.name)}</b><small>${esc(s.user.email)}</small><span>${esc(s.user.role)}</span><button data-action="account">Account details</button><button data-action="logout">Sign out</button></div></details></div>
 
     </header>
 
