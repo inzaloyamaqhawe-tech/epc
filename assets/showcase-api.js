@@ -33,13 +33,13 @@ async function execute(path,options={}){
 
  if(path==='/config')return{demo:false,staticDemo:true,issuance:false,initialized:true,references:REFERENCES,zones:ZONES,referenceSource:'GBCSA EPC reference guidance · verify licensed standard'};
 
- if(path==='/me')return{user:{id:'workspace-user',name:'Bolide Presenter',email:'',role:'Admin'},csrf:null};
+ if(path==='/me')return{user:{id:'workspace-user',name:'Langa Ngidi',email:'',role:'Admin'},csrf:null};
 
  if(path==='/portfolio')return d;
 
  if(path==='/audit')return d.audit||[];
 
- if(path==='/team')return[{name:'Bolide Presenter',email:'',role:'Admin'}];
+ if(path==='/team')return[{name:'Langa Ngidi',email:'',role:'Admin'}];
 
  if(path==='/assessments'&&method==='POST'){output=fresh(body);d.assessments.unshift(output);}
 

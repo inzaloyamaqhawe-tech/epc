@@ -3,6 +3,7 @@ import {esc,icon,nav} from './primitives.js';
 
 
 export function workspaceShell(s,content) {
+  const initials=s.user.name.trim().split(/\s+/).map(part=>part[0]).filter(Boolean).slice(0,2).join('').toUpperCase();
 
   const title=nav.find(n=>n[0]===s.page)?.[2]||'Assessment';
 
@@ -21,7 +22,7 @@ export function workspaceShell(s,content) {
 
     <nav>${nav.filter(([id])=>id!=='team'||['Admin','Super Admin'].includes(s.user.role)).map(([id,i,label])=>`<a href="#${id}" class="nav-item ${s.page===id?'active':''}" aria-label="${label}" title="${label}" ${s.page===id?'aria-current="page"':''}>${icon(i)}<span class="nav-text">${label}</span>${id==='assessments'?`<span class="nav-count">${s.data.assessments.filter(a=>a.status==='Under Review').length}</span>`:''}</a>`).join('')}</nav>
 
-    <div class="sidebar-bottom"><div class="user"><span class="avatar">${esc(s.user.name.slice(0,2).toUpperCase())}</span><div>${esc(s.user.name)}<small>${esc(s.user.role)}</small></div><button class="icon-button" data-action="logout" title="Sign out" aria-label="Sign out">${icon('logout')}</button></div></div>
+    <div class="sidebar-bottom"><div class="user"><span class="avatar">${esc(initials)}</span><div>${esc(s.user.name)}<small>${esc(s.user.role)}</small></div><button class="icon-button" data-action="logout" title="Sign out" aria-label="Sign out">${icon('logout')}</button></div></div>
 
   </aside>
 
@@ -35,7 +36,7 @@ export function workspaceShell(s,content) {
 
       <button class="workspace-search" data-action="workspace-search" aria-label="Search workspace">${icon('search')}<span>Search workspace</span><kbd>Ctrl K</kbd></button>
 
-      <div class="top-actions"><span class="connection-status" id="connection-status"><span class="dot"></span>Connected</span><button class="icon-button theme-toggle" data-action="theme" title="${s.theme==='dark'?'Use light mode':'Use dark mode'}" aria-label="${s.theme==='dark'?'Use light mode':'Use dark mode'}" aria-pressed="${s.theme==='dark'}">${icon(s.theme==='dark'?'sun':'moon')}</button><details class="account-menu"><summary class="avatar small" aria-label="Account menu" title="Account menu">${esc(s.user.name.slice(0,2).toUpperCase())}</summary><div class="account-popover"><b>${esc(s.user.name)}</b><small>${esc(s.user.email)}</small><span>${esc(s.user.role)}</span><button data-action="account">Account details</button><button data-action="logout">Sign out</button></div></details></div>
+      <div class="top-actions"><span class="connection-status" id="connection-status"><span class="dot"></span>Connected</span><button class="icon-button theme-toggle" data-action="theme" title="${s.theme==='dark'?'Use light mode':'Use dark mode'}" aria-label="${s.theme==='dark'?'Use light mode':'Use dark mode'}" aria-pressed="${s.theme==='dark'}">${icon(s.theme==='dark'?'sun':'moon')}</button><details class="account-menu"><summary class="avatar small" aria-label="Account menu" title="Account menu">${esc(initials)}</summary><div class="account-popover"><b>${esc(s.user.name)}</b><small>${esc(s.user.email)}</small><span>${esc(s.user.role)}</span><button data-action="account">Account details</button><button data-action="logout">Sign out</button></div></details></div>
 
     </header>
 
