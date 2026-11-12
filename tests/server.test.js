@@ -57,10 +57,12 @@ test('HTTP integration: tenant boundaries, evidence, role gates, revisions, acti
   });
   let c;
   await t.test('SANEDI activation requires official PDF and POPIA; verification reveals minimal fields; PDF exports',async()=>{
-    c=(await call('/portfolio','GET',null,admin)).json.certificates[0];assert.match(c.internal,/^BEP-\d{4}-\d{5}$/);
+    c=(await call('/portfolio','GET',null,admin)).json.certificates[0];assert.match(c.internal,/^BEP-\d{4}-\d{5}$/);assert.equal((await call('/verify/'+c.publicToken)).res.status,404);
     assert.equal((await call(`/certificates/${c.id}/activate`,'POST',{sanedi:'TEST-001',issued:'2026-01-01',version:c.version},reviewer)).res.status,400);
     const form=new FormData();form.append('kind','Issued EPC');form.append('file',new Blob(['%PDF-1.4\nISSUED TEST'],{type:'application/pdf'}),'issued.pdf');const doc=(await call(`/assessments/${a.id}/documents`,'POST',form,assessor)).json;
-    const r=await call(`/certificates/${c.id}/activate`,'POST',{sanedi:'TEST-001',issued:'2026-01-01',version:c.version,popia:true,professionalConfirmed:true,documentId:doc.id},reviewer);assert.equal(r.res.status,200);c=r.json;assert.equal(c.expires,'2031-01-01');
+    const r=await call(`/certificates/${c.id}/activate`,'POST',{sanedi:'TEST-001',issued:'2026-01-01',version:c.version,popia:true,professionalConfirmed:true,documentId:doc.id,certifiedGrade:'D',issuer:'Test Issuer',issuerAssessor:'Test Assessor',officialQrUrl:'https://epc.sanedi.org.za/'},reviewer);assert.equal(r.res.status,200);c=r.json;assert.equal(c.expires,'2031-01-01');assert.equal(c.certifiedGrade,'D');
+    const qr=await call(`/certificates/${c.id}/qr`,'GET',null,admin);assert.equal(qr.res.status,200);assert.match(qr.res.headers.get('content-type'),/^image\/png/);
+    assert.equal((await call(`/certificates/${c.id}/qr`,'GET',null,outsider)).res.status,404);
     const pub=await call('/verify/'+c.publicToken);assert.equal(pub.json.status,'Active');assert.equal(pub.json.address,undefined);assert.equal(pub.json.tenant,undefined);
     const pdf=await call(`/assessments/${a.id}/pdf`,'GET',null,admin);assert.equal(pdf.res.status,200);assert.equal(Buffer.from(await pdf.res.arrayBuffer()).subarray(0,5).toString(),'%PDF-');
     assert.equal((await call(`/assessments/${a.id}/pdf`,'GET',null,outsider)).res.status,404);

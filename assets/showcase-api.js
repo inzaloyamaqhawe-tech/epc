@@ -35,7 +35,13 @@ async function execute(path,options={}){
 
  if(path==='/me')return{user:{id:'workspace-user',name:'Langa Ngidi',email:'',role:'Admin'},csrf:null};
 
- if(path==='/portfolio')return d;
+ if(path==='/portfolio'){
+  for(const initiative of d.initiatives){
+   try{initiative.projection=projectedSavings(find(d,initiative.assessmentId),[initiative]);}
+   catch{initiative.projection=null;}
+  }
+  return d;
+ }
 
  if(path==='/audit')return d.audit||[];
 

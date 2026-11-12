@@ -1,3 +1,4 @@
+import QRCode from 'qrcode';
 import express from 'express';
 import helmet from 'helmet';
 import { rateLimit } from 'express-rate-limit';
@@ -166,6 +167,11 @@ export async function createApp(config = configFromEnv()) {
     const c=store.get(req.user.tenant,'certificate',req.params.id)||fail('Certificate not found',404);
     if(c.status!=='Draft (Pending SANEDI)')fail('Only pending certificates may be activated',409);
     const sanedi=String(req.body.sanedi||'').trim(),issued=String(req.body.issued||'');
+    const {certifiedGrade, issuer, issuerAssessor, officialQrUrl} = req.body;
+    if (!['A','B','C','D','E','F','G'].includes(certifiedGrade)) fail('Enter the grade shown on the issued EPC');
+    if ([issuer, issuerAssessor].some(value => typeof value !== 'string' || !value.trim() || value.trim().length > 160)) fail('Enter the issuing organisation and assessor shown on the issued EPC');
+    const qrUrl = typeof officialQrUrl === 'string' && officialQrUrl.length <= 1000 ? URL.parse(officialQrUrl) : null;
+    if (!qrUrl || qrUrl.protocol !== 'https:' || qrUrl.username || qrUrl.password) fail('Enter the HTTPS verification URL from the issued EPC QR');
     if(!/^[A-Za-z0-9/._-]{3,100}$/.test(sanedi))fail('Enter the official SANEDI number');
     if(!/^\d{4}-\d{2}-\d{2}$/.test(issued)||!Number.isFinite(Date.parse(issued))||issued>new Date().toISOString().slice(0,10)||anniversary(issued)<=new Date().toISOString().slice(0,10))fail('Enter a valid, unexpired issue date');
     const expires=String(req.body.expires||anniversary(issued));
@@ -175,7 +181,7 @@ export async function createApp(config = configFromEnv()) {
     if(issuedDocument?.assessmentId!==c.assessmentId||issuedDocument.kind!=='Issued EPC')fail('Attach the externally issued EPC PDF first');
     if(store.db.prepare("SELECT * FROM records WHERE kind='certificate'").all().some(r=>{const other=store.unpack(r);return other.id!==c.id&&other.sanedi===sanedi;}))fail('SANEDI number already recorded',409);
     const updated=store.transaction(()=>{
-      const next=store.put(req.user.tenant,'certificate',{...c,sanedi,issued,expires,status:'Active',documentId:issuedDocument.id,popia:{by:req.user.id,at:new Date().toISOString()}},req.body.version);
+      const next=store.put(req.user.tenant,'certificate',{...c,sanedi,issued,expires,certifiedGrade,issuer:issuer.trim(),issuerAssessor:issuerAssessor.trim(),officialQrUrl:qrUrl.href,status:'Active',documentId:issuedDocument.id,popia:{by:req.user.id,at:new Date().toISOString()}},req.body.version);
       const a=store.get(req.user.tenant,'assessment',c.assessmentId);
       if(a.renewalOf)for(const previous of store.list(req.user.tenant,'certificate').filter(x=>x.assessmentId===a.renewalOf && ['Active','Expired'].includes(certificateStatus(x))))store.put(req.user.tenant,'certificate',{...previous,status:'Renewed',renewedBy:c.id},previous.version);
       store.log(req.user,'certificate.activate',c.id,{sanedi,documentId:issuedDocument.id});return next;
@@ -186,14 +192,21 @@ export async function createApp(config = configFromEnv()) {
     if(!String(req.body.reason||'').trim())fail('A revocation reason is required');if(c.status==='Revoked')fail('Already revoked',409);
     res.json(store.transaction(()=>{const next=store.put(req.user.tenant,'certificate',{...c,status:'Revoked',reason:String(req.body.reason).slice(0,2000)},req.body.version);store.log(req.user,'certificate.revoke',c.id,{reason:next.reason});return next;}));
   });
+  app.get('/api/certificates/:id/qr',requireUser,async(req,res)=>{
+    const certificate=store.get(req.user.tenant,'certificate',req.params.id);
+    if(!certificate?.documentId||!certificate.sanedi||!certificate.officialQrUrl)fail('Issued EPC verification QR not found',404);
+    res.set('Cache-Control','private, no-store');
+    res.type('png').send(await QRCode.toBuffer(certificate.officialQrUrl,{width:180,margin:2}));
+  });
   app.get('/api/assessments/:id/pdf',requireUser,async(req,res)=>{
-    const a=assessment(req),c=store.list(req.user.tenant,'certificate').find(c=>c.assessmentId===a.id);if(validateAssessment(c?.snapshot||a).some(e=>e.field==='months'))fail('Enter twelve consecutive completed months before exporting an annual energy review pack',422);const pdf=await assessmentPdf(c?.snapshot||a,c,config.origin);
+    const a=assessment(req),c=store.list(req.user.tenant,'certificate').find(c=>c.assessmentId===a.id);if(validateAssessment(c?.snapshot||a).some(e=>e.field==='months'))fail('Enter twelve consecutive completed months before exporting an annual energy review pack',422);const pdf=await assessmentPdf(c?.snapshot||a,c);
     store.log(req.user,'report.export',a.id);res.type('application/pdf').attachment(`${c?.internal||'assessment'}-review.pdf`).send(pdf);
   });
   app.get('/api/verify/:token',(req,res)=>{
     res.set('Cache-Control','no-store');if(!/^[a-f0-9]{48}$/.test(req.params.token))fail('Record not found',404);
     const row=store.db.prepare("SELECT * FROM records WHERE kind='certificate'").all().find(r=>store.unpack(r).publicToken===req.params.token);
     if(!row)fail('Record not found',404);const c=store.unpack(row);
+    if(!c.documentId||!c.sanedi||!c.issued)fail('Record not found',404);
     res.json({propertyId:c.propertyId,internal:c.internal,sanedi:c.sanedi||null,status:certificateStatus(c),issued:c.issued||null,expires:c.expires||null,notice:'Platform record only. Confirm official certification with SANEDI.'});
   });
   app.post('/api/initiatives',requireUser,allow(...EDIT,'Compliance Officer'),(req,res)=>{
