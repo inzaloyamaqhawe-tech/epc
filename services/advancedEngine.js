@@ -1,5 +1,5 @@
 import {positive} from './fuelConverter.js';
-import {calculate,classify} from './scoringEngine.js';
+import {calculate,classify,reportingPeriodIssues} from './scoringEngine.js';
 // Engineering analysis only: no assumed emissions factors or deemed mixed-use
 // compliance. A professional verifies applicability and measurement boundaries.
 export function vacancySchedule(nfa,spaces){
@@ -13,7 +13,7 @@ export function mixedOccupancy(parts){
   return{area,energy,eui:energy/area,weightedReference:rows.reduce((t,p)=>t+p.reference*p.areaShare,0),parts:rows,reviewFlags:rows.filter(p=>p!==dominant&&p.areaShare<.1&&p.energyShare!==null&&p.energyShare>.1).map(p=>`${p.label||'Secondary occupancy'}: small area, material energy contribution. Verify apportionment and metering; do not roll in automatically.`),requiresProfessionalReview:rows.length>1};
 }
 export function projectedSavings(a,initiatives){
-  if(a?.months?.length!==12)throw new Error('Annual scenarios require twelve months of baseline data');
+  if(!a||reportingPeriodIssues(a).length)throw new Error('Annual scenarios require twelve consecutive completed months of baseline data');
   const baseline=calculate(a),saved=initiatives.reduce((t,i)=>t+positive(i.kwh,'Saved annual energy'),0);if(saved>baseline.net)throw new Error('Savings exceed included consumption; review overlap and boundaries');const energy=baseline.net-saved,eui=energy/baseline.assessedArea;
   return{baselineEui:baseline.eui,baselineGrade:baseline.grade,projectedEnergy:energy,projectedEui:eui,projectedGrade:baseline.grade?classify(eui,a.benchmark):null,annualSavedKwh:saved,notice:'Scenario estimate only; avoids no overlap automatically and is not a measured EPC result.'};
 }

@@ -37,3 +37,30 @@ test('browser workflow: persist, validate, review, evidence, imports and backup 
 test('browser calculation and normalization modules match server source',async()=>{
  for(const file of ['scoringEngine.js','fuelConverter.js','benchmarkMatrix.js','normalization.js','advancedEngine.js'])assert.equal(await readFile('assets/engine/'+file,'utf8'),await readFile('services/'+file,'utf8'));
 });
+
+test('pre-assessment walkthrough withholds a grade until the ledger and benchmark are ready',async()=>{
+ const {certificates}=await import('../components/views.js');
+ const source=exampleAssessment('Pre-assessment walkthrough',125,3200);
+ const draft=await api('/assessments',{method:'POST',body:{...source,months:[]}});
+ const render=async()=>certificates({data:await api('/portfolio'),config:{staticDemo:true}});
+ assert.match(await render(),/Inputs needed/);
+ const duplicateMonths=source.months.map(row=>({...row,month:source.months[0].month}));
+ await api('/assessments/'+draft.id,{method:'PUT',body:{...draft,months:duplicateMonths}});
+ assert.equal((await api('/portfolio')).assessments.find(a=>a.id===draft.id).result,null);
+ const form=new FormData();
+ form.set('type','energy');form.set('assessmentId',draft.id);
+ form.set('file',new File([['month,grid',...source.months.map(m=>m.month+','+m.grid)].join('\n')],'metered.csv'));
+ const preview=await api('/imports/preview',{method:'POST',body:form});
+ assert.equal(preview.valid,12);
+ await api('/imports/'+preview.id+'/commit',{method:'POST',body:{confirm:true,confirmReplace:true}});
+ const imported=(await api('/portfolio')).assessments.find(a=>a.id===draft.id);
+ assert.equal(imported.result.grade,null);
+ await api('/assessments/'+draft.id,{method:'PUT',body:{...imported,methodologyConfirmed:true}});
+ for(const title of ['Lighting recommendation','Controls recommendation'])await api('/initiatives',{method:'POST',body:{assessmentId:draft.id,title,kwh:24000,tariff:2.85,cost:180000,emission:0.9}});
+ const html=await render();
+ assert.match(html,/Intensity ÷ benchmark/);
+ assert.match(html,/Target rating: B/);
+ assert.match(html,/projected intensity/);
+ assert.match(html,/Model a recommendation package/);
+ assert.match(html,/Certified EPC rating<\/h3>\s*<p class="muted">—/);
+});

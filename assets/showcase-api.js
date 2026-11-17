@@ -1,4 +1,4 @@
-import {calculate,validateAssessment,savings} from './engine/scoringEngine.js';
+import {reportingPeriodIssues,calculate,validateAssessment,savings} from './engine/scoringEngine.js';
 
 import {REFERENCES,ZONES} from './engine/benchmarkMatrix.js';
 
@@ -14,7 +14,7 @@ async function storage(mode,fn){return new Promise((resolve,reject)=>{const requ
 
 async function data(){if(!snapshot){snapshot=await storage('readonly',store=>store.get('portfolio'));if(!snapshot){const source=document.querySelector('meta[name=epc-showcase-data]').content;const response=await fetch(source);if(!response.ok)throw new Error('Portfolio unavailable');snapshot=await response.json();snapshot.audit=[];snapshot.documents=(snapshot.documents||[]).map(doc=>({...doc,blob:doc.content?new Blob([doc.content],{type:'application/pdf'}):doc.blob}));await storage('readwrite',store=>store.put(snapshot,'portfolio'));}}return snapshot;}
 
-function result(a){try{return a.months?.length===12?calculate(a):null;}catch{return null;}}
+function result(a){try{return !reportingPeriodIssues(a).length?calculate(a):null;}catch{return null;}}
 
 function find(d,id){const a=d.assessments.find(a=>a.id===id);if(!a)throw new Error('Assessment not found');return a;}
 
@@ -36,6 +36,7 @@ async function execute(path,options={}){
  if(path==='/me')return{user:{id:'workspace-user',name:'Langa Ngidi',email:'',role:'Admin'},csrf:null};
 
  if(path==='/portfolio'){
+  for(const assessment of d.assessments)assessment.result=result(assessment);
   for(const initiative of d.initiatives){
    try{initiative.projection=projectedSavings(find(d,initiative.assessmentId),[initiative]);}
    catch{initiative.projection=null;}
@@ -69,7 +70,7 @@ async function execute(path,options={}){
 
  else if(path==='/imports/preview'){const type=body.get('type'),raw=await readFile(body.get('file'),body.get('sheet'));const stage={id:crypto.randomUUID(),type,assessmentId:body.get('assessmentId'),raw};stages.set(stage.id,stage);return{...buildImportPreview(raw,type,{},d.assessments),id:stage.id,type,fields:IMPORT_FIELDS[type],sheets:raw.sheets,selectedSheet:raw.selectedSheet};}
 
- else if(/^\/imports\/[^/]+\/(map|commit)$/.test(path)){const stage=stages.get(path.split('/')[2]);if(!stage)throw new Error('Upload the file again');if(path.endsWith('/map'))stage.mapping=body.mapping;const preview=buildImportPreview(stage.raw,stage.type,stage.mapping||{},d.assessments);if(path.endsWith('/map'))return{...preview,id:stage.id,type:stage.type,fields:IMPORT_FIELDS[stage.type],sheets:stage.raw.sheets,selectedSheet:stage.raw.selectedSheet};if(!body.confirm||preview.errors)throw new Error('Review valid rows and confirm the import');if(stage.type==='energy'){if(!body.confirmReplace)throw new Error('Confirm ledger replacement');const a=find(d,stage.assessmentId);if(!['Draft','Revision Required'].includes(a.status))throw new Error('Only draft ledgers can be replaced');a.months=preview.rows.map(r=>r.value);a.version=(a.version||0)+1;a.result=result(a);}else d.assessments.unshift(...preview.rows.map(r=>fresh(r.value)));output={count:preview.valid,type:stage.type};stages.delete(stage.id);}
+ else if(/^\/imports\/[^/]+\/(map|commit)$/.test(path)){const stage=stages.get(path.split('/')[2]);if(!stage)throw new Error('Upload the file again');if(path.endsWith('/map'))stage.mapping=body.mapping;const preview=buildImportPreview(stage.raw,stage.type,stage.mapping||{},d.assessments);if(path.endsWith('/map'))return{...preview,id:stage.id,type:stage.type,fields:IMPORT_FIELDS[stage.type],sheets:stage.raw.sheets,selectedSheet:stage.raw.selectedSheet};if(!body.confirm||preview.errors)throw new Error('Review valid rows and confirm the import');if(stage.type==='energy'){if(!body.confirmReplace)throw new Error('Confirm ledger replacement');const a=find(d,stage.assessmentId);if(!['Draft','Revision Required'].includes(a.status))throw new Error('Only draft ledgers can be replaced');a.months=preview.rows.map(r=>r.value).sort((left,right)=>left.month.localeCompare(right.month));a.methodologyConfirmed=false;a.version=(a.version||0)+1;a.result=result(a);}else d.assessments.unshift(...preview.rows.map(r=>fresh(r.value)));output={count:preview.valid,type:stage.type};stages.delete(stage.id);}
 
  else throw new Error('This operation needs the connected application server');
 

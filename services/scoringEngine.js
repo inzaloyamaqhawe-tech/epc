@@ -31,6 +31,16 @@ export function calculate(a) {
   const net = gross - excluded, eui = net / assessedArea;
   return { grid, solar, exported, diesel, lpg, other, excluded, gross, net, assessedArea, eui, grade: benchmarkValid(a) ? classify(eui, Number(a.benchmark)) : null, excludedPercent: gross ? excluded / gross * 100 : 0, applicability: applicability(a), provisional: !benchmarkValid(a) };
 }
+export function reportingPeriodIssues(a, today = new Date()) {
+  const errors = [];
+  const months = a.months || [];
+  const keys = months.map(m => m.month);
+  const ord = keys.map(k => /^\d{4}-(0[1-9]|1[0-2])$/.test(k) ? Number(k.slice(0,4))*12+Number(k.slice(5)) : NaN);
+  if (months.length !== 12 || new Set(keys).size !== 12 || ord.some((n,i) => !Number.isFinite(n) || (i && n !== ord[i-1]+1))) errors.push('Enter 12 consecutive, unique calendar months in order');
+  if (keys.some(k => k >= today.toISOString().slice(0,7))) errors.push('Use completed calendar months only');
+  return errors;
+}
+
 export function validateAssessment(a, documents = [], today = new Date()) {
   const errors = [];
   for (const key of ['name', 'address', 'province', 'municipality', 'erf', 'professional', 'professionalNumber', 'auditDate', 'auditBody', 'auditReference']) if (!String(a[key] || '').trim()) errors.push({ field: key, message: `${key} is required` });
@@ -39,11 +49,7 @@ export function validateAssessment(a, documents = [], today = new Date()) {
   if (Number(a.operationalYears) < 2 || a.majorRenovation) errors.push({ field: 'operationalYears', message: 'Two years of qualifying operation without major renovation are required' });
   if ((a.months||[]).some(m=>Number(m.diesel)||Number(m.lpg)||Number(m.other)) && !a.factorSource?.trim()) errors.push({ field: 'factorSource', message: 'Record energy conversion factors, other carriers and their source or measurement basis' });
   if (Number(a.vacancyAreaMonths)>0 && !a.exclusionNotes?.trim()) errors.push({ field: 'vacancyAreaMonths', message: 'Explain the vacancy area-month calculation and evidence source' });
-  const months = a.months || [];
-  const keys = months.map(m => m.month);
-  const ord = keys.map(k => /^\d{4}-(0[1-9]|1[0-2])$/.test(k) ? Number(k.slice(0,4))*12+Number(k.slice(5)) : NaN);
-  if (months.length !== 12 || new Set(keys).size !== 12 || ord.some((n,i) => !Number.isFinite(n) || (i && n !== ord[i-1]+1))) errors.push({ field: 'months', message: 'Enter 12 consecutive, unique calendar months in order' });
-  if (keys.some(k => k >= today.toISOString().slice(0,7))) errors.push({ field: 'months', message: 'Use completed calendar months only' });
+  errors.push(...reportingPeriodIssues(a, today).map(message => ({field:'months',message})));
   if (a.auditDate && (!validDate(a.auditDate) || a.auditDate > today.toISOString().slice(0,10))) errors.push({ field: 'auditDate', message: 'Audit date must be a valid date on or before today' });
   if (!Array.isArray(a.systems) || a.systems.length !== 9 || a.systems.some(s => !['Verified','Action needed','Not applicable'].includes(s.status) || !s.notes?.trim())) errors.push({ field: 'systems', message: 'Record a status and evidence note for all nine technical sections' });
   for (const kind of ['Utility bills','Building plans','Site audit']) if (!documents.some(d => d.kind === kind)) errors.push({ field: 'documents', message: `${kind} evidence is required` });

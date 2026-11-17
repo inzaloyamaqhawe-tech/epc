@@ -24,12 +24,33 @@ export function certificates(s) {
       const issued = issuedRecords.find(c => c.status === 'Active') || issuedRecords[0];
       const pending = records.find(c => c.status === 'Draft (Pending SANEDI)');
       const targets = s.data.initiatives.filter(i => i.assessmentId === a.id && i.status !== 'Completed' && i.projection?.projectedGrade);
+      const r = a.result;
+      const ready = Boolean(r?.grade);
+      const missing = [];
+      if (!r) {
+        missing.push('Check that the ledger has 12 consecutive completed months, valid energy values and a positive assessed floor area.');
+      }
+      if (!a.benchmark || !a.benchmarkSource?.trim() || !a.methodologyConfirmed) {
+        missing.push('Record the occupancy and zone benchmark, its source and methodology confirmation.');
+      }
+      if (!ready && !missing.length) missing.push('Check the occupancy and energy zone against the recorded benchmark.');
+      const assumptions = ready ? `<dl class="prediction-inputs">
+        <dt>Reporting period</dt><dd>${esc(a.months[0].month)} to ${esc(a.months.at(-1).month)}</dd>
+        <dt>Included annual energy</dt><dd>${number(r.net, 0)} kWh</dd>
+        <dt>Assessed floor area</dt><dd>${number(r.assessedArea, 1)} m²</dd>
+        <dt>Predicted energy intensity</dt><dd>${number(r.eui, 1)} kWh/m²/year</dd>
+        <dt>Occupancy and zone benchmark</dt><dd>${number(a.benchmark, 1)} kWh/m²/year · ${esc(a.occupancy)}, zone ${esc(a.zone)}<small>${esc(a.benchmarkSource)}</small></dd>
+        <dt>Intensity ÷ benchmark</dt><dd>${number(r.eui / Number(a.benchmark), 3)}×</dd>
+      </dl>` : `<ul class="prediction-missing">${missing.map(item => `<li>${esc(item)}</li>`).join('')}</ul>`;
       return `<article class="panel certificate-card">
         <h2>${esc(a.name)}</h2><p class="muted">${esc(a.propertyId)}</p>
-        <section class="preassessment-rating"><h3>Predicted EPC rating</h3>${grade(a.result?.grade)}
-          <p class="muted">${predictionNote}</p></section>
+        <section class="preassessment-rating"><h3>Predicted EPC rating</h3>${ready ? grade(r.grade) : '<p class="muted">Inputs needed</p>'}
+          <p class="muted">${predictionNote}</p>${assumptions}<button class="secondary" data-action="detail" data-id="${esc(a.id)}">Open assessment</button></section>
         <section class="preassessment-rating"><h3>Target rating</h3>
-          ${targets.map(i => `<p>${grade(i.projection.projectedGrade, 'Target rating')} ${esc(i.title)} <small>Assumes the projected savings are achieved.</small></p>`).join('') || '<p class="muted">No target modelled yet.</p>'}</section>
+          ${ready && targets.length ? targets.map(i => `<div class="target-measure"><b>${esc(i.title)}</b>
+            <p>Target rating ${grade(i.projection.projectedGrade, 'Target rating')}</p>
+            <small>${number(i.projection.annualSavedKwh, 0)} kWh/year estimated savings · ${number(i.projection.projectedEui, 1)} kWh/m²/year projected intensity</small></div>`).join('') : '<p class="muted">A target requires a complete baseline and a modelled recommendation.</p>'}
+          ${ready && targets.length > 1 ? `<button class="secondary" data-action="target-package" data-id="${esc(a.id)}">Model a recommendation package</button>` : ''}</section>
         <section class="preassessment-rating"><h3>Certified EPC rating</h3>
           ${issued ? `<p>${esc(issued.certifiedGrade || '—')} · ${esc(issued.status)}</p>
             <dl><dt>Issuing organisation</dt><dd>${esc(issued.issuer || '—')}</dd>

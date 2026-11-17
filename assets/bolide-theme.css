@@ -86,3 +86,9 @@ input::placeholder,textarea::placeholder{color:var(--muted);opacity:1}
 .preassessment-rating p{margin:8px 0}
 .issued-qr{display:block;width:100px;height:100px;margin:12px 0}
 .table-wrap .prediction-note{max-width:155px;white-space:normal;text-transform:none;letter-spacing:0;font-weight:450;color:var(--muted);margin-top:4px}
+.prediction-inputs{display:grid;grid-template-columns:minmax(115px,1fr) 1.3fr;gap:8px 12px;margin:14px 0}
+.prediction-inputs dt{color:var(--muted)}
+.prediction-inputs dd{margin:0;font-weight:650;overflow-wrap:anywhere}
+.prediction-inputs dd small{font-weight:450;color:var(--muted)}
+.prediction-missing{padding-left:20px;margin:12px 0}
+.target-measure{margin:12px 0;padding-bottom:10px;border-bottom:1px solid var(--line)}

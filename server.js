@@ -12,7 +12,7 @@ import { openDatabase } from './services/database.js';
 import { sessionMiddleware, requireUser, allow, csrf, hashPassword, verifyPassword, hashToken, ROLES } from './services/auth.js';
 import { storageAdapter } from './services/storage.js';
 import { normalizeAssessment } from './services/normalization.js';
-import { calculate, validateAssessment, anniversary, certificateStatus, savings, validDate } from './services/scoringEngine.js';
+import { reportingPeriodIssues, calculate, validateAssessment, anniversary, certificateStatus, savings, validDate } from './services/scoringEngine.js';
 import { assessmentPdf } from './services/pdf.js';
 import { seedDemo } from './services/seed.js';
 import { REFERENCES, REFERENCE_SOURCE, ZONES } from './services/benchmarkMatrix.js';
@@ -94,7 +94,7 @@ export async function createApp(config = configFromEnv()) {
     });res.json(result);
   });
   app.get('/api/portfolio',requireUser,(req,res)=>{
-    const assessments=store.list(req.user.tenant,'assessment').map(a=>{let result=null;try{if(a.months?.length===12)result=calculate(a);}catch{}return{...a,result};});
+    const assessments=store.list(req.user.tenant,'assessment').map(a=>{let result=null;try{if(!reportingPeriodIssues(a).length)result=calculate(a);}catch{}return{...a,result};});
     const certificates=store.list(req.user.tenant,'certificate').map(c=>({...c,status:certificateStatus(c)}));
     const initiatives=store.list(req.user.tenant,'initiative').map(i=>{let projection=null;try{projection=projectedSavings(assessments.find(a=>a.id===i.assessmentId),[i]);}catch{}return{...i,result:savings(i),projection};});
     res.json({assessments,certificates,initiatives,compliance:store.list(req.user.tenant,'compliance'),documents:store.list(req.user.tenant,'document').map(({key,sha256,...d})=>d)});

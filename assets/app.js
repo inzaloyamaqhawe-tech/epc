@@ -1,3 +1,4 @@
+import {projectedSavings} from './engine/advancedEngine.js';
 import {financialMetrics,predictionNote} from '/components/views.js';
 import {installBoardDrag,targetsFor} from '/components/board.js';
 import {esc,number,money,icon,badge,grade,shell,heading,dashboard,properties,assessments,certificates,initiatives,compliance,reports,propertyTable,pagination} from '/components/views.js';
@@ -48,6 +49,34 @@ async function moveAssessment(id,status){
   openModal(`<h2>${status==='Approved'?'Approve assessment':'Request revision'}</h2><p>${esc(a.name)}</p><form id="board-transition-form" data-id="${id}" data-status="${status}">${status==='Approved'?'<label class="check"><input type="checkbox" name="confirmBenchmark" required> I independently verified the benchmark, factors and methodology.</label><label class="check"><input type="checkbox" name="confirmProfessional" required> I independently verified the professional’s registration / authorisation.</label>':'<label class="field">Field requiring revision<input name="field" required maxlength="80"></label><label class="field">Review comment<textarea name="comment" required maxlength="2000"></textarea></label>'}<button class="primary" type="submit">${status==='Approved'?'Approve assessment':'Request revision'}</button></form>`);return;
  }
  await api(`/assessments/${id}/transition`,{method:'POST',body:{status,version:a.version}});await refresh();render();toast(`Assessment moved to ${status}`);
+}
+function packageOptions(id) {
+  return s.data.initiatives.filter(i => i.assessmentId === id && i.status !== 'Completed' && i.projection?.projectedGrade);
+}
+function openTargetPackage(id) {
+  const assessment = s.data.assessments.find(a => a.id === id);
+  if (!assessment?.result?.grade) throw new Error('Complete the predicted rating inputs first.');
+  openModal(`<h2>Model a recommendation package</h2><p>${esc(assessment.name)}</p>
+    <form id="target-package-form" data-id="${esc(id)}">
+      ${packageOptions(id).map(i => `<label class="check"><input type="checkbox" name="measure" value="${esc(i.id)}"> ${esc(i.title)} · ${number(i.kwh,0)} kWh/year</label>`).join('')}
+      <label class="field">Combined annual savings after adjustments · kWh<input name="combined" type="number" min="0.01" step="any" required></label>
+      <label class="check"><input name="overlapChecked" type="checkbox" required> I checked for overlap and interactions between the selected recommendations.</label>
+      <button class="primary" type="submit">Calculate package target</button>
+    </form><div id="target-package-result" aria-live="polite"></div>`);
+}
+function calculateTargetPackage(form, fields) {
+  const assessment = s.data.assessments.find(a => a.id === form.dataset.id);
+  if (!assessment?.result?.grade) throw new Error('Complete the predicted rating inputs first.');
+  const selected = new Set(fields.getAll('measure'));
+  const measures = packageOptions(assessment.id).filter(i => selected.has(i.id));
+  const combined = Number(fields.get('combined'));
+  const total = measures.reduce((sum, i) => sum + Number(i.kwh), 0);
+  if (measures.length < 2 || fields.get('overlapChecked') !== 'on') throw new Error('Select at least two recommendations and confirm your overlap check.');
+  if (!Number.isFinite(combined) || combined <= 0 || combined > total) throw new Error('Enter positive combined savings within the sum of the selected estimates.');
+  const projection = projectedSavings(assessment, [{kwh:combined}]);
+  $('#target-package-result').innerHTML = `<section class="preassessment-rating"><h3>Target rating ${grade(projection.projectedGrade,'Target rating')}</h3>
+    <p>${number(combined,0)} kWh/year combined estimated savings · ${number(projection.projectedEui,1)} kWh/m²/year projected intensity</p>
+    <p>To target this grade, complete ${measures.map(i => esc(i.title)).join(', ')} and achieve the stated savings.</p></section>`;
 }
 function closeModal(){modal.close();previousFocus?.focus();}
 
@@ -141,7 +170,7 @@ async function validation(){const a=await saveDraft(true);if(!a.id)throw new Err
 
 async function navigate(){if(s.page==='wizard'){clearTimeout(saveTimer);await saveDraft(true);}s.page=location.hash.slice(1)||'dashboard';if(!['dashboard','properties','assessments','certificates','savings','compliance','reports','team'].includes(s.page))s.page='dashboard';if(s.page==='team'&&['Admin','Super Admin'].includes(s.user?.role))s.team=await api('/team');await refresh();document.body.classList.remove('menu-open');render();}
 
-document.addEventListener('input',e=>{if(e.target.dataset.finance){const key=e.target.dataset.finance;if(!e.target.checkValidity())return;const next={...s.financialAssumptions,[key]:Number(e.target.value)};try{for(const el of document.querySelectorAll('[data-financial-result]')){const i=s.data.initiatives.find(i=>i.id===el.dataset.financialResult);el.innerHTML=financialMetrics(i,next);}s.financialAssumptions=next;document.querySelector(`[data-finance-output="${key}"]`).textContent=e.target.value;localStorage.setItem('bolide-epc:financial-scenario',JSON.stringify(next));}catch(err){toast(err.message,true);}return;}if(e.target.id==='workspace-query'){updateWorkspaceSearch(e.target.value);return;}if(e.target.id==='search'){s.search=e.target.value;s.tablePage=1;renderPropertyResults();return;}if(e.target.closest('#wizard-form')){readDraft();liveCalculation();clearTimeout(saveTimer);saveTimer=setTimeout(()=>saveDraft(true).catch(e=>toast(e.message,true)),1000);}});
+document.addEventListener('input',e=>{if(e.target.closest('#target-package-form'))$('#target-package-result').replaceChildren();if(e.target.dataset.finance){const key=e.target.dataset.finance;if(!e.target.checkValidity())return;const next={...s.financialAssumptions,[key]:Number(e.target.value)};try{for(const el of document.querySelectorAll('[data-financial-result]')){const i=s.data.initiatives.find(i=>i.id===el.dataset.financialResult);el.innerHTML=financialMetrics(i,next);}s.financialAssumptions=next;document.querySelector(`[data-finance-output="${key}"]`).textContent=e.target.value;localStorage.setItem('bolide-epc:financial-scenario',JSON.stringify(next));}catch(err){toast(err.message,true);}return;}if(e.target.id==='workspace-query'){updateWorkspaceSearch(e.target.value);return;}if(e.target.id==='search'){s.search=e.target.value;s.tablePage=1;renderPropertyResults();return;}if(e.target.closest('#wizard-form')){readDraft();liveCalculation();clearTimeout(saveTimer);saveTimer=setTimeout(()=>saveDraft(true).catch(e=>toast(e.message,true)),1000);}});
 
 document.addEventListener('change',async e=>{try{if(e.target.dataset.savingsFilter){s.savingsFilters={...s.savingsFilters,[e.target.dataset.savingsFilter]:e.target.value};render();return;}if(e.target.id==='page-size'){s.pageSize=Number(e.target.value);s.tablePage=1;renderPropertyResults();}if(e.target.id==='sort-order'){s.sort=e.target.value;s.tablePage=1;renderPropertyResults();}if(e.target.id==='rating-filter'||e.target.id==='province-filter'){s[e.target.id==='rating-filter'?'filter':'province']=e.target.value;s.tablePage=1;renderPropertyResults();}if(e.target.dataset.initiative){const i=s.data.initiatives.find(i=>i.id===e.target.dataset.initiative);await api('/initiatives/'+i.id,{method:'PUT',body:{status:e.target.value,version:i.version}});await refresh();render();toast('Initiative updated');}if(e.target.closest('#wizard-form')){readDraft();liveCalculation();clearTimeout(saveTimer);saveTimer=setTimeout(()=>saveDraft(true).catch(e=>toast(e.message,true)),500);}}catch(err){toast(err.message,true);}});
 
@@ -164,6 +193,7 @@ document.addEventListener('click',async e=>{const link=e.target.closest('a[href]
 
   if(action==='move-stage'){const a=s.data.assessments.find(a=>a.id===id);const choices=targetsFor(a,s.user,s.config.staticDemo);return openModal(`<h2>Move assessment</h2><p>${esc(a.name)}</p><div class="button-row">${choices.map(status=>`<button class="primary" data-action="board-move" data-id="${id}" data-status="${status}">${status}</button>`).join('')}</div>`);}
   if(action==='board-move'){closeModal();return await moveAssessment(id,b.dataset.status);}
+  if(action==='target-package')return openTargetPackage(id);
   if(action==='detail')return detail(id);
 
   if(action==='edit'){closeModal();s.draft=structuredClone(s.data.assessments.find(a=>a.id===id));s.step=0;s.page='wizard';render();return;}
@@ -214,6 +244,7 @@ document.addEventListener('click',async e=>{const link=e.target.closest('a[href]
 document.addEventListener('submit',async e=>{e.preventDefault();const form=e.target;if(form.id?.startsWith('legacy-import-'))return;const button=form.querySelector('[type="submit"]');if(button)button.disabled=true;try{const fd=new FormData(form),body=Object.fromEntries(fd);
 
   if(form.id==='board-transition-form'){const a=s.data.assessments.find(a=>a.id===form.dataset.id);await api(`/assessments/${a.id}/transition`,{method:'POST',body:{...body,status:form.dataset.status,version:a.version,confirmBenchmark:body.confirmBenchmark==='on',confirmProfessional:body.confirmProfessional==='on'}});closeModal();await refresh();render();toast('Assessment moved to '+form.dataset.status);}
+  if(form.id==='target-package-form')calculateTargetPackage(form,fd);
   if(form.id==='restore-form'){if(!s.config.staticDemo||!['Admin','Super Admin'].includes(s.user?.role))throw new Error('Administrator access is required.');await (await import('./showcase-api.js')).restorePortfolio(fd.get('file'));closeModal();await refresh();render();toast('Portfolio restored');}
 
   if(form.id==='account-form'){if(body.newPassword!==body.confirmPassword)throw new Error('New passwords do not match');const result=await api('/account',{method:'PUT',body});s.user=result.user;closeModal();render();toast('Account details updated');}if(form.id==='login-form'){const invite=new URLSearchParams(location.search).get('invite');const result=await api(invite?'/invites/accept':'/login',{method:'POST',body:{...body,token:invite}});s.user=result.user;s.csrf=result.csrf;history.replaceState(null,'','/');await navigate();}
