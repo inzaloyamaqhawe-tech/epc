@@ -20,7 +20,7 @@ export function workspaceShell(s,content) {
 
     <div class="nav-label">ENERGY MANAGEMENT</div>
 
-    <nav>${nav.filter(([id])=>id!=='team'||['Admin','Super Admin'].includes(s.user.role)).map(([id,i,label])=>`<a href="#${id}" class="nav-item ${s.page===id?'active':''}" aria-label="${label}" title="${label}" ${s.page===id?'aria-current="page"':''}>${icon(i)}<span class="nav-text">${label}</span>${id==='assessments'?`<span class="nav-count">${s.data.assessments.filter(a=>a.status==='Under Review').length}</span>`:''}</a>`).join('')}</nav>
+    <nav>${nav.filter(([id])=>(id!=='solar'||s.data.solarSites?.length)&&(id!=='team'||['Admin','Super Admin'].includes(s.user.role))).map(([id,i,label])=>`<a href="#${id}" class="nav-item ${s.page===id?'active':''}" aria-label="${label}" title="${label}" ${s.page===id?'aria-current="page"':''}>${icon(i)}<span class="nav-text">${label}</span>${id==='assessments'?`<span class="nav-count">${s.data.assessments.filter(a=>a.status==='Under Review').length}</span>`:''}</a>`).join('')}</nav>
 
     <div class="sidebar-bottom"><div class="user"><span class="avatar">${esc(initials)}</span><div>${esc(s.user.name)}<small>${esc(s.user.role)}</small></div><button class="icon-button" data-action="logout" title="Sign out" aria-label="Sign out">${icon('logout')}</button></div></div>
 

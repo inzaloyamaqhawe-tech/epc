@@ -1,3 +1,4 @@
+import {beamSites} from './assets/beam-sites.js';
 import QRCode from 'qrcode';
 import express from 'express';
 import helmet from 'helmet';
@@ -97,7 +98,7 @@ export async function createApp(config = configFromEnv()) {
     const assessments=store.list(req.user.tenant,'assessment').map(a=>{let result=null;try{if(!reportingPeriodIssues(a).length)result=calculate(a);}catch{}return{...a,result};});
     const certificates=store.list(req.user.tenant,'certificate').map(c=>({...c,status:certificateStatus(c)}));
     const initiatives=store.list(req.user.tenant,'initiative').map(i=>{let projection=null;try{projection=projectedSavings(assessments.find(a=>a.id===i.assessmentId),[i]);}catch{}return{...i,result:savings(i),projection};});
-    res.json({assessments,certificates,initiatives,compliance:store.list(req.user.tenant,'compliance'),documents:store.list(req.user.tenant,'document').map(({key,sha256,...d})=>d)});
+    res.json({assessments,certificates,initiatives,solarSites:config.demo?beamSites:[],compliance:store.list(req.user.tenant,'compliance'),documents:store.list(req.user.tenant,'document').map(({key,sha256,...d})=>d)});
   });
   const assessment=(req)=>store.get(req.user.tenant,'assessment',req.params.id)||fail('Assessment not found',404);
   app.post('/api/assessments',requireUser,allow(...EDIT),(req,res)=>{

@@ -1,3 +1,4 @@
+import {beamSites} from './beam-sites.js';
 import {reportingPeriodIssues,calculate,validateAssessment,savings} from './engine/scoringEngine.js';
 
 import {REFERENCES,ZONES} from './engine/benchmarkMatrix.js';
@@ -36,6 +37,7 @@ async function execute(path,options={}){
  if(path==='/me')return{user:{id:'workspace-user',name:'Langa Ngidi',email:'',role:'Admin'},csrf:null};
 
  if(path==='/portfolio'){
+  d.solarSites=structuredClone(beamSites);
   for(const assessment of d.assessments)assessment.result=result(assessment);
   for(const initiative of d.initiatives){
    try{initiative.projection=projectedSavings(find(d,initiative.assessmentId),[initiative]);}
